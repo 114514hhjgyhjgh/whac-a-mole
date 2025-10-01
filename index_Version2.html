@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>打地鼠游戏</title>
+    <style>
+        body {
+            font-family: "微软雅黑", Arial, sans-serif;
+            background: #e6f7ff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            margin-top: 30px;
+            color: #1890ff;
+        }
+        #mode-select, #game, #result {
+            margin-top: 30px;
+        }
+        .btn {
+            padding: 12px 32px;
+            font-size: 18px;
+            background: #1890ff;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            margin: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #40a9ff;
+        }
+        #info {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 15px;
+        }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(4, 70px);
+            grid-template-rows: repeat(4, 70px);
+            gap: 12px;
+        }
+        .cell {
+            background: #fff;
+            border: 2px solid #1890ff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+        .cell.active {
+            background: #ffd666;
+            color: #fa541c;
+            font-weight: bold;
+        }
+        #result {
+            padding: 30px 50px;
+            background: #fffbe6;
+            border: 2px solid #ffe58f;
+            border-radius: 14px;
+            text-align: center;
+        }
+        #result h2 {
+            color: #faad14;
+        }
+        @media (max-width: 600px) {
+            #board {
+                grid-template-columns: repeat(4, 48px);
+                grid-template-rows: repeat(4, 48px);
+                gap: 6px;
+            }
+            .cell {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>打地鼠游戏</h1>
+    <div id="mode-select">
+        <button class="btn" onclick="startGame('time')">时间模式（60秒）</button>
+        <button class="btn" onclick="startGame('infinite')">无限模式</button>
+    </div>
+    <div id="game" style="display:none;">
+        <div id="info">
+            <span id="score-label">得分：<span id="score">0</span></span>
+            <span id="timer-label" style="display:none;">剩余时间：<span id="timer">60</span>s</span>
+            <button class="btn" id="stop-btn" style="display:none;" onclick="stopInfinite()">结束游戏</button>
+        </div>
+        <div id="board"></div>
+    </div>
+    <div id="result" style="display:none;">
+        <h2 id="result-title"></h2>
+        <p id="result-score"></p>
+        <button class="btn" onclick="restart()">再来一次</button>
+        <button class="btn" onclick="backHome()">返回首页</button>
+    </div>
+    <script>
+        let mode = "time"; // 'time' or 'infinite'
+        let score = 0;
+        let timer = 60;
+        let timerInterval = null;
+        let moleInterval = null;
+        let currentCell = -1;
+        let gameRunning = false;
+
+        // 生成16格
+        function generateBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = "";
+            for (let i = 0; i < 16; i++) {
+                const div = document.createElement('div');
+                div.className = "cell";
+                div.dataset.index = i;
+                div.onclick = () => hitCell(i);
+                board.appendChild(div);
+            }
+        }
+
+        function startGame(selectedMode) {
+            mode = selectedMode;
+            score = 0;
+            timer = 60;
+            gameRunning = true;
+            document.getElementById('mode-select').style.display = 'none';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('game').style.display = '';
+            document.getElementById('score').textContent = score;
+            document.getElementById('timer').textContent = timer;
+            if (mode === 'time') {
+                document.getElementById('timer-label').style.display = '';
+                document.getElementById('stop-btn').style.display = 'none';
+            } else {
+                document.getElementById('timer-label').style.display = 'none';
+                document.getElementById('stop-btn').style.display = '';
+            }
+            generateBoard();
+            nextMole();
+            moleInterval = setInterval(nextMole, 800);
+            if (mode === 'time') {
+                timerInterval = setInterval(function() {
+                    timer--;
+                    document.getElementById('timer').textContent = timer;
+                    if (timer <= 0) {
+                        endGame();
+                    }
+                }, 1000);
+            }
+        }
+
+        function nextMole() {
+            const board = document.getElementById('board');
+            if (currentCell !== -1) {
+                board.children[currentCell].classList.remove('active');
+                board.children[currentCell].textContent = '';
+            }
+            let newCell;
+            do {
+                newCell = Math.floor(Math.random() * 16);
+            } while (newCell === currentCell);
+            currentCell = newCell;
+            board.children[currentCell].classList.add('active');
+            board.children[currentCell].textContent = "🐹";
+        }
+
+        function hitCell(index) {
+            if (!gameRunning) return;
+            const board = document.getElementById('board');
+            if (index === currentCell && board.children[index].classList.contains('active')) {
+                score++;
+                document.getElementById('score').textContent = score;
+                nextMole();
+            }
+        }
+
+        function endGame() {
+            gameRunning = false;
+            clearInterval(timerInterval);
+            clearInterval(moleInterval);
+            showResult();
+        }
+
+        function stopInfinite() {
+            if (mode === 'infinite') endGame();
+        }
+
+        function showResult() {
+            document.getElementById('game').style.display = 'none';
+            document.getElementById('result').style.display = '';
+            document.getElementById('result-title').textContent = "游戏结束";
+            document.getElementById('result-score').textContent = "你的得分：" + score;
+        }
+
+        function restart() {
+            startGame(mode);
+        }
+
+        function backHome() {
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('game').style.display = 'none';
+            document.getElementById('mode-select').style.display = '';
+        }
+
+        window.onload = function() {
+            generateBoard();
+        };
+    </script>
+</body>
+</html>
